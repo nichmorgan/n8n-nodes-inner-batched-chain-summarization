@@ -20,11 +20,21 @@
 		"sourceMap": true,
 		"skipLibCheck": true,
 		"outDir": "./dist/",
+		"baseUrl": ".",
+		"paths": {
+			"@utils/*": ["utils/*"]
+		}
 	},
 	"include": [
 		"credentials/**/*",
 		"nodes/**/*",
 		"nodes/**/*.json",
+		"utils/**/*",
 		"package.json",
+	],
+	"exclude": [
+		"**/*.test.ts",
+		"**/test/**/*",
+		"node_modules"
 	],
 }
