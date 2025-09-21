@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-inner-batched-chain-summarization",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "n8n community node with intelligent batched chain summarization for processing large documents efficiently",
   "keywords": [
     "n8n-community-node-package",

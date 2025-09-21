@@ -29,7 +29,7 @@ vi.mock('@utils/N8nJsonLoader', () => ({
 
 vi.mock('langchain/chains', () => ({
 	loadSummarizationChain: vi.fn().mockImplementation(() => ({
-		invoke: vi.fn().mockResolvedValue({ output_text: 'Standard chain summary' }),
+		invoke: vi.fn().mockResolvedValue({ output: { text: 'Standard chain summary' } }),
 		withConfig: vi.fn().mockReturnThis(),
 	})),
 }));
@@ -102,8 +102,8 @@ describe('processItem', () => {
 			const item = { json: { text: 'test' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'documentLoader', 'simple');
 
-			expect(result).toHaveProperty('output_text');
-			expect(typeof result?.output_text).toBe('string');
+			expect(result).toHaveProperty('output');
+			expect(typeof result?.output?.text).toBe('string');
 		});
 
 		it('should handle Array<Document> input from document loader', async () => {
@@ -115,7 +115,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'test' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'documentLoader', 'none');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 	});
 
@@ -133,7 +133,7 @@ describe('processItem', () => {
 			};
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith('chunkSize', 0, 1000);
 			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith('chunkOverlap', 0, 200);
 		});
@@ -147,7 +147,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'Text for advanced chunking' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'advanced');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 			expect(mockExecuteFunctions.getInputConnectionData).toHaveBeenCalledWith(
 				NodeConnectionType.AiTextSplitter,
 				0,
@@ -163,7 +163,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'Simple text without chunking' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'none');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should use custom text key', async () => {
@@ -175,7 +175,7 @@ describe('processItem', () => {
 			const item = { json: { content: 'Text from custom key' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 	});
 
@@ -199,7 +199,7 @@ describe('processItem', () => {
 
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputBinary', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
 				'options.binaryDataKey',
 				0,
@@ -218,7 +218,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'Test text' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should use batched chain when batch size > 1 and chunking enabled', async () => {
@@ -230,7 +230,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'Test text for batching' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should use standard chain when chunking is disabled', async () => {
@@ -242,7 +242,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'Test text' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'none');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 	});
 
@@ -256,7 +256,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'Text for map reduce summarization' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should handle stuff method', async () => {
@@ -268,7 +268,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'Text for stuff summarization' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should handle refine method', async () => {
@@ -281,7 +281,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'Text for refine summarization' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 	});
 
@@ -304,7 +304,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'Text with custom prompts' } };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
 				'options.customPrompts.values',
 				0,
@@ -331,7 +331,7 @@ describe('processItem', () => {
 			const item = { json: {} };
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should handle missing language model', async () => {

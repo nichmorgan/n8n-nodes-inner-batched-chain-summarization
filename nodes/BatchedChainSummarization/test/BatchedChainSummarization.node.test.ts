@@ -30,7 +30,7 @@ vi.mock('@utils/N8nJsonLoader', () => ({
 
 vi.mock('langchain/chains', () => ({
 	loadSummarizationChain: vi.fn().mockImplementation(() => ({
-		invoke: vi.fn().mockResolvedValue({ output_text: 'Standard chain summary' }),
+		invoke: vi.fn().mockResolvedValue({ output: { text: 'Standard chain summary' } }),
 		withConfig: vi.fn().mockReturnThis(),
 	})),
 }));
@@ -48,6 +48,14 @@ const createExecuteFunctionsMock = (
 		getNodeParameter: vi.fn(),
 		continueOnFail: vi.fn(),
 		getExecutionCancelSignal: vi.fn(),
+		helpers: {
+			assertBinaryData: vi.fn().mockReturnValue({
+				data: 'SGVsbG8gV29ybGQ=', // "Hello World" in base64
+				mimeType: 'text/plain',
+			}),
+			binaryToBuffer: vi.fn(),
+			getBinaryStream: vi.fn(),
+		},
 	} as unknown as IExecuteFunctions;
 	const mockLlm = {
 		invoke: vi.fn().mockResolvedValue({ content: 'Summary of chunk 1' }),
@@ -85,6 +93,7 @@ const createExecuteFunctionsMock = (
 			delayBetweenBatches: parameters.delayBetweenBatches || 0,
 			chunkSize: parameters.chunkSize || 1000,
 			chunkOverlap: parameters.chunkOverlap || 200,
+			loader: parameters.loader || 'auto',
 			'options.summarizationMethodAndPrompts.values': parameters.customPrompts || {
 				summarizationMethod: parameters.summarizationMethod || 'map_reduce',
 				prompt: 'Write a concise summary of the following:\n\n{text}\n\nCONCISE SUMMARY:',
@@ -151,7 +160,7 @@ describe('BatchedChainSummarization', () => {
 			expect(result).toHaveLength(1);
 			expect(result[0]).toHaveLength(1);
 			expect(result[0][0]).toHaveProperty('json');
-			expect(result[0][0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output');
 		});
 
 		it('should process multiple input items', async () => {
@@ -167,7 +176,7 @@ describe('BatchedChainSummarization', () => {
 
 			expect(result).toHaveLength(1);
 			expect(result[0]).toHaveLength(3);
-			expect(result[0].every((item) => item.json && 'output_text' in item.json)).toBe(true);
+			expect(result[0].every((item) => item.json && 'output' in item.json)).toBe(true);
 		});
 
 		it('should handle different operation modes', async () => {
@@ -282,7 +291,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0][0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output');
 		});
 	});
 
@@ -304,7 +313,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0][0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output');
 		});
 	});
 
@@ -365,8 +374,8 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0][0].json).toHaveProperty('output_text');
-			expect(typeof result[0][0].json.output_text).toBe('string');
+			expect(result[0][0].json).toHaveProperty('output');
+			expect(typeof result[0][0].json.output.text).toBe('string');
 		});
 
 		it('should handle mixed input types correctly', async () => {
@@ -388,7 +397,7 @@ describe('BatchedChainSummarization', () => {
 
 			expect(result).toHaveLength(1);
 			expect(result[0]).toHaveLength(3);
-			expect(result[0].every((item) => item.json && 'output_text' in item.json)).toBe(true);
+			expect(result[0].every((item) => item.json && 'output' in item.json)).toBe(true);
 		});
 
 		it('should process binary data correctly', async () => {
@@ -413,7 +422,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0][0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output');
 		});
 	});
 
@@ -427,7 +436,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0][0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output');
 		});
 
 		it('should handle very large batch sizes', async () => {
@@ -438,7 +447,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0][0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output');
 		});
 
 		it('should handle zero delay between batches', async () => {
@@ -450,7 +459,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0][0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output');
 		});
 	});
 });

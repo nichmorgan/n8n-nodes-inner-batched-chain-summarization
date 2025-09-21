@@ -88,7 +88,7 @@ export class BatchedSummarizationChain {
 		const finalSummary = await combinePrompt.format({ text: combinedText });
 
 		const result = await this.model.invoke(finalSummary);
-		return { output_text: typeof result === 'string' ? result : result.content };
+		return { output: { text: typeof result === 'string' ? result : result.content } };
 	}
 
 	private async stuff(documents: Document[]): Promise<ChainValues> {
@@ -97,12 +97,12 @@ export class BatchedSummarizationChain {
 		const formattedPrompt = await prompt.format({ text: combinedText });
 
 		const result = await this.model.invoke(formattedPrompt);
-		return { output_text: typeof result === 'string' ? result : result.content };
+		return { output: { text: typeof result === 'string' ? result : result.content } };
 	}
 
 	private async refine(documents: Document[]): Promise<ChainValues> {
 		if (documents.length === 0) {
-			return { output_text: '' };
+			return { output: { text: '' } };
 		}
 
 		const questionPrompt = this.questionPrompt ?? this.getDefaultPrompt();
@@ -139,7 +139,7 @@ export class BatchedSummarizationChain {
 			}
 		}
 
-		return { output_text: currentSummaryText };
+		return { output: { text: currentSummaryText } };
 	}
 
 	private async processDocumentsInBatches(

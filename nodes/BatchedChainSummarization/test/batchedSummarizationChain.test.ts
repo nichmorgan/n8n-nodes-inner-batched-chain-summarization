@@ -68,9 +68,10 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
-			expect(typeof result.output_text).toBe('string');
-			expect(result.output_text).toBe('Final combined summary');
+			expect(result).toHaveProperty('output');
+			expect(result.output).toHaveProperty('text');
+			expect(typeof result.output.text).toBe('string');
+			expect(result.output.text).toBe('Final combined summary');
 		});
 
 		it('should process documents in batches', async () => {
@@ -82,8 +83,8 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
-			expect(result.output_text).toBe('Final combined summary');
+			expect(result).toHaveProperty('output');
+			expect(result.output.text).toBe('Final combined summary');
 		});
 
 		it('should respect delay between batches', async () => {
@@ -122,8 +123,8 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
-			expect(result.output_text).toBe('Final combined summary');
+			expect(result).toHaveProperty('output');
+			expect(result.output.text).toBe('Final combined summary');
 		});
 	});
 
@@ -136,8 +137,8 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
-			expect(result.output_text).toBe('Summary 1'); // First response from mock
+			expect(result).toHaveProperty('output');
+			expect(result.output.text).toBe('Summary 1'); // First response from mock
 		});
 
 		it('should use custom prompt when provided', async () => {
@@ -154,8 +155,8 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
-			expect(result.output_text).toBe('Summary 1');
+			expect(result).toHaveProperty('output');
+			expect(result.output.text).toBe('Summary 1');
 		});
 	});
 
@@ -169,8 +170,8 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
-			expect(result.output_text).toBe('Summary 3'); // Last response from sequential processing
+			expect(result).toHaveProperty('output');
+			expect(result.output.text).toBe('Summary 3'); // Last response from sequential processing
 		});
 
 		it('should handle empty documents', async () => {
@@ -181,7 +182,7 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: [] });
 
-			expect(result).toEqual({ output_text: '' });
+			expect(result).toEqual({ output: { text: '' } });
 		});
 
 		it('should handle single document', async () => {
@@ -193,8 +194,8 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: singleDocument });
 
-			expect(result).toHaveProperty('output_text');
-			expect(result.output_text).toBe('Summary 1');
+			expect(result).toHaveProperty('output');
+			expect(result.output.text).toBe('Summary 1');
 		});
 
 		it('should respect batch size and delay', async () => {
@@ -231,7 +232,7 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 	});
 
@@ -383,7 +384,7 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: largeBatchDocuments });
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 			expect(mockSleep).toHaveBeenCalledWith(100);
 		});
 	});
@@ -420,7 +421,7 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 			expect(mockSleep).not.toHaveBeenCalled(); // No delays needed
 		});
 
@@ -510,8 +511,8 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: [largeDocument] });
 
-			expect(result).toHaveProperty('output_text');
-			expect(result.output_text).toBe('Summary 1');
+			expect(result).toHaveProperty('output');
+			expect(result.output.text).toBe('Summary 1');
 		});
 
 		it('should handle zero batch size gracefully', async () => {
@@ -524,7 +525,7 @@ describe('BatchedSummarizationChain', () => {
 			// Should still work, treating 0 as 1
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should handle negative batch size gracefully', async () => {
@@ -537,7 +538,7 @@ describe('BatchedSummarizationChain', () => {
 			// Should still work with some default behavior
 			const result = await chain.invoke({ input_documents: documents });
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should handle very long delay times with mocked sleep', async () => {
@@ -575,7 +576,7 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: complexDocuments });
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should handle documents with special characters', async () => {
@@ -593,7 +594,7 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: specialCharDocuments });
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 		});
 
 		it('should handle very small documents with batching', async () => {
@@ -612,7 +613,7 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: tinyDocuments });
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 			// Should call sleep once (between 2 batches: first with 2 docs, second with 1 doc)
 			expect(mockSleep).toHaveBeenCalledWith(100);
 			expect(mockSleep).toHaveBeenCalledTimes(1);
@@ -634,7 +635,7 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: whitespaceDocuments });
 
-			expect(result).toHaveProperty('output_text');
+			expect(result).toHaveProperty('output');
 			// Refine: 1 initial + 2 remaining docs in 1 batch = no sleep needed
 			expect(mockSleep).not.toHaveBeenCalled();
 		});

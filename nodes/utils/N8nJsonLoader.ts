@@ -49,6 +49,7 @@ export class N8nJsonLoader {
 
 		let documentLoader: JSONLoader | TextLoader | null = null;
 
+
 		if (mode === 'allInputData') {
 			const itemString = JSON.stringify(item.json);
 			const itemBlob = new Blob([itemString], { type: 'application/json' });
