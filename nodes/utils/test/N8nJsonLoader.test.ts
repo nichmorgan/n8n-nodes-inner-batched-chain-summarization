@@ -9,6 +9,7 @@ describe('N8nJsonLoader', () => {
 	beforeEach(() => {
 		mockExecuteFunctions = {
 			getNodeParameter: vi.fn(),
+			getNode: vi.fn().mockReturnValue({ name: 'Test Node' }),
 		} as unknown as IExecuteFunctions;
 
 		mockTextSplitter = {

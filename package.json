@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-inner-batched-chain-summarization",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "n8n community node with intelligent batched chain summarization for processing large documents efficiently",
   "keywords": [
     "n8n-community-node-package",
@@ -29,7 +29,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nichmorgan/n8n-nodes-inner-batched-chain-summarization.git"
+    "url": "git+https://github.com/nichmorgan/n8n-nodes-inner-batched-chain-summarization.git"
   },
   "engines": {
     "node": ">=20.15"
@@ -44,6 +44,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "docker:down": "docker compose down",
+    "docker:up": "pnpm build && pnpm docker:down && docker compose up --build -d",
     "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes package.json"
   },
   "files": [
@@ -61,19 +63,23 @@
     "@vitest/coverage-v8": "^3.2.4",
     "eslint": "9.36.0",
     "eslint-plugin-n8n-nodes-base": "^1.16.3",
-    "gulp": "^5.0.0",
+    "gulp": "^5.0.1",
     "gulp-cli": "^3.1.0",
-    "prettier": "^3.5.3",
+    "n8n": "^1.111.1",
+    "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
-    "typescript": "^5.8.2",
+    "typescript": "^5.9.2",
     "vitest": "3.2.4",
     "vitest-mock-extended": "3.1.0"
   },
   "dependencies": {
     "@langchain/community": "^0.3.56",
-    "@langchain/core": "^0.3.76",
+    "@langchain/core": "^0.3.77",
     "@langchain/textsplitters": "^0.1.0",
+    "@types/tmp": "^0.2.6",
     "langchain": "^0.3.34",
-    "n8n-workflow": "^1.82.0"
+    "n8n-workflow": "^1.82.0",
+    "sqlite3": "^5.1.7",
+    "tmp-promise": "^3.0.3"
   }
 }

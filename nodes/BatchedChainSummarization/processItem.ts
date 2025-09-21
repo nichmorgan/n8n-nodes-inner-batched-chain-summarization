@@ -65,11 +65,16 @@ export async function processItem(
 			| Array<Document<Record<string, unknown>>>;
 
 		const isN8nLoader =
-			documentInput instanceof N8nJsonLoader || documentInput instanceof N8nBinaryLoader;
+			documentInput instanceof N8nJsonLoader ||
+			documentInput instanceof N8nBinaryLoader ||
+			(typeof documentInput === 'object' &&
+				'processItem' in documentInput &&
+				typeof documentInput.processItem === 'function');
 
-		processedDocuments = isN8nLoader
-			? await documentInput.processItem(item, itemIndex)
-			: documentInput;
+		processedDocuments =
+			isN8nLoader && 'processItem' in documentInput
+				? await documentInput.processItem(item, itemIndex)
+				: (documentInput as Document[]);
 
 		return await chain.withConfig(getTracingConfig(ctx)).invoke({
 			input_documents: processedDocuments,

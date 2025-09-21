@@ -1,27 +1,90 @@
 import type { Document } from '@langchain/core/documents';
-import type { IExecuteFunctions, INodeExecutionData } from 'n8n-workflow';
+import type { TextSplitter } from '@langchain/textsplitters';
+import { JSONLoader } from 'langchain/document_loaders/fs/json';
+import { TextLoader } from 'langchain/document_loaders/fs/text';
+import {
+	type IExecuteFunctions,
+	type INodeExecutionData,
+	type ISupplyDataFunctions,
+	NodeOperationError,
+} from 'n8n-workflow';
+
+import { getMetadataFiltersValues } from './helpers';
 
 export class N8nJsonLoader {
 	constructor(
-		private ctx: IExecuteFunctions,
-		private prefix: string,
-		private textSplitter?: any,
+		private context: IExecuteFunctions | ISupplyDataFunctions,
+		private optionsPrefix = '',
+		private textSplitter?: TextSplitter,
 	) {}
 
-	async processItem(item: INodeExecutionData, itemIndex: number): Promise<Document[]> {
-		// Mock implementation - in real n8n this would extract text from JSON data
-		const textKey = this.ctx.getNodeParameter(`${this.prefix}textKey`, itemIndex, 'text') as string;
-		const text = item.json[textKey] || JSON.stringify(item.json);
+	async processAll(items?: INodeExecutionData[]): Promise<Document[]> {
+		const docs: Document[] = [];
 
-		const document: Document = {
-			pageContent: typeof text === 'string' ? text : JSON.stringify(text),
-			metadata: { source: 'json', itemIndex, ...item.json },
-		};
+		if (!items) return [];
 
-		if (this.textSplitter) {
-			return await this.textSplitter.splitDocuments([document]);
+		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+			const processedDocuments = await this.processItem(items[itemIndex], itemIndex);
+
+			docs.push(...processedDocuments);
 		}
 
-		return [document];
+		return docs;
+	}
+
+	async processItem(item: INodeExecutionData, itemIndex: number): Promise<Document[]> {
+		const mode = this.context.getNodeParameter('jsonMode', itemIndex, 'allInputData') as
+			| 'allInputData'
+			| 'expressionData';
+
+		const pointers = this.context.getNodeParameter(
+			`${this.optionsPrefix}pointers`,
+			itemIndex,
+			'',
+		) as string;
+		const pointersArray = pointers.split(',').map((pointer) => pointer.trim());
+		const metadata = getMetadataFiltersValues(this.context, itemIndex) ?? [];
+
+		if (!item) return [];
+
+		let documentLoader: JSONLoader | TextLoader | null = null;
+
+		if (mode === 'allInputData') {
+			const itemString = JSON.stringify(item.json);
+			const itemBlob = new Blob([itemString], { type: 'application/json' });
+			documentLoader = new JSONLoader(itemBlob, pointersArray);
+		}
+
+		if (mode === 'expressionData') {
+			const dataString = this.context.getNodeParameter('jsonData', itemIndex) as string | object;
+			if (typeof dataString === 'object') {
+				const itemBlob = new Blob([JSON.stringify(dataString)], { type: 'application/json' });
+				documentLoader = new JSONLoader(itemBlob, pointersArray);
+			}
+
+			if (typeof dataString === 'string') {
+				const itemBlob = new Blob([dataString], { type: 'text/plain' });
+				documentLoader = new TextLoader(itemBlob);
+			}
+		}
+
+		if (documentLoader === null) {
+			// This should never happen
+			throw new NodeOperationError(this.context.getNode(), 'Document loader is not initialized');
+		}
+
+		const docs = this.textSplitter
+			? await this.textSplitter.splitDocuments(await documentLoader.load())
+			: await documentLoader.load();
+
+		if (metadata) {
+			docs.forEach((doc) => {
+				doc.metadata = {
+					...doc.metadata,
+					...metadata,
+				};
+			});
+		}
+		return docs;
 	}
 }

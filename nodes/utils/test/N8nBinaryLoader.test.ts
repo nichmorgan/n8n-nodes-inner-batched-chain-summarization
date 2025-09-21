@@ -9,6 +9,15 @@ describe('N8nBinaryLoader', () => {
 	beforeEach(() => {
 		mockExecuteFunctions = {
 			getNodeParameter: vi.fn(),
+			getNode: vi.fn().mockReturnValue({ name: 'Test Node' }),
+			helpers: {
+				assertBinaryData: vi.fn().mockReturnValue({
+					data: 'SGVsbG8gV29ybGQ=', // "Hello World" in base64
+					mimeType: 'text/plain',
+				}),
+				binaryToBuffer: vi.fn(),
+				getBinaryStream: vi.fn(),
+			},
 		} as unknown as IExecuteFunctions;
 
 		mockTextSplitter = {

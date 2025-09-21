@@ -43,6 +43,7 @@ services:
       - NODE_FUNCTION_ALLOW_EXTERNAL=*
       - N8N_COMMUNITY_PACKAGES_ENABLED=true
       - N8N_CUSTOM_EXTENSIONS=/home/node/.n8n/custom/node_modules/custom_nodes
+      - N8N_LOG_LEVEL=debug
     links:
       - postgres
     volumes:
