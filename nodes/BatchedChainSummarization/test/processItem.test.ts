@@ -13,17 +13,17 @@ vi.mock('@utils/tracing', () => ({
 
 vi.mock('@utils/N8nBinaryLoader', () => ({
 	N8nBinaryLoader: vi.fn().mockImplementation(() => ({
-		processItem: vi.fn().mockResolvedValue([
-			{ pageContent: 'Binary content', metadata: { source: 'binary' } },
-		]),
+		processItem: vi
+			.fn()
+			.mockResolvedValue([{ pageContent: 'Binary content', metadata: { source: 'binary' } }]),
 	})),
 }));
 
 vi.mock('@utils/N8nJsonLoader', () => ({
 	N8nJsonLoader: vi.fn().mockImplementation(() => ({
-		processItem: vi.fn().mockResolvedValue([
-			{ pageContent: 'JSON content', metadata: { source: 'json' } },
-		]),
+		processItem: vi
+			.fn()
+			.mockResolvedValue([{ pageContent: 'JSON content', metadata: { source: 'json' } }]),
 	})),
 }));
 
@@ -66,9 +66,7 @@ const createExecuteFunctionsMock = (
 			return new RecursiveCharacterTextSplitter({ chunkSize: 100, chunkOverlap: 20 });
 		}
 		if (connectionType === NodeConnectionType.AiDocument) {
-			return [
-				{ pageContent: 'Document from loader', metadata: { source: 'loader' } },
-			];
+			return [{ pageContent: 'Document from loader', metadata: { source: 'loader' } }];
 		}
 		return undefined;
 	});
@@ -130,7 +128,9 @@ describe('processItem', () => {
 				chunkOverlap: 100,
 			});
 
-			const item = { json: { text: 'This is a long text that needs to be chunked and summarized.' } };
+			const item = {
+				json: { text: 'This is a long text that needs to be chunked and summarized.' },
+			};
 			const result = await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
 			expect(result).toHaveProperty('output_text');
@@ -150,7 +150,7 @@ describe('processItem', () => {
 			expect(result).toHaveProperty('output_text');
 			expect(mockExecuteFunctions.getInputConnectionData).toHaveBeenCalledWith(
 				NodeConnectionType.AiTextSplitter,
-				0
+				0,
 			);
 		});
 
@@ -203,7 +203,7 @@ describe('processItem', () => {
 			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
 				'options.binaryDataKey',
 				0,
-				'data'
+				'data',
 			);
 		});
 	});
@@ -308,7 +308,7 @@ describe('processItem', () => {
 			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
 				'options.customPrompts.values',
 				0,
-				{}
+				{},
 			);
 		});
 	});
@@ -341,7 +341,7 @@ describe('processItem', () => {
 			const item = { json: { text: 'test' } };
 
 			await expect(
-				processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple')
+				processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple'),
 			).rejects.toThrow();
 		});
 	});
@@ -366,7 +366,66 @@ describe('processItem', () => {
 			const item = { json: { text: 'test' } };
 			await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
 
-			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith('delayBetweenBatches', 0, 0);
+			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
+				'delayBetweenBatches',
+				0,
+				0,
+			);
+		});
+	});
+
+	describe('Custom Prompts Coverage', () => {
+		it('should handle stuff method custom prompt', async () => {
+			const mockExecuteFunctions = createExecuteFunctionsMock({
+				customPrompts: {
+					stuffPrompt: 'Custom stuff prompt: {text}',
+				},
+			});
+
+			const item = { json: { text: 'test' } };
+			await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
+
+			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
+				'options.customPrompts.values',
+				0,
+				{},
+			);
+		});
+
+		it('should handle refine method custom prompts', async () => {
+			const mockExecuteFunctions = createExecuteFunctionsMock({
+				customPrompts: {
+					refinePrompt: 'Custom refine prompt: {existing_answer} + {text}',
+					refineQuestionPrompt: 'Custom question prompt: {text}',
+				},
+			});
+
+			const item = { json: { text: 'test' } };
+			await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
+
+			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
+				'options.customPrompts.values',
+				0,
+				{},
+			);
+		});
+
+		it('should handle map_reduce method custom prompts', async () => {
+			const mockExecuteFunctions = createExecuteFunctionsMock({
+				customPrompts: {
+					combineMapPrompt: 'Custom map prompt: {text}',
+					combinePrompt: 'Custom combine prompt: {text}',
+				},
+			});
+
+			const item = { json: { text: 'test' } };
+			await processItem(mockExecuteFunctions, 0, item, 'nodeInputJson', 'simple');
+
+			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
+				'options.customPrompts.values',
+				0,
+				{},
+			);
 		});
 	});
 });

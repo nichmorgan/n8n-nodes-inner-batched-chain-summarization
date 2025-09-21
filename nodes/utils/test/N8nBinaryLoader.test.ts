@@ -28,7 +28,12 @@ describe('N8nBinaryLoader', () => {
 		});
 
 		it('should create instance with text splitter', () => {
-			const loader = new N8nBinaryLoader(mockExecuteFunctions, 'options.', 'data', mockTextSplitter);
+			const loader = new N8nBinaryLoader(
+				mockExecuteFunctions,
+				'options.',
+				'data',
+				mockTextSplitter,
+			);
 			expect(loader).toBeInstanceOf(N8nBinaryLoader);
 		});
 	});
@@ -134,7 +139,12 @@ describe('N8nBinaryLoader', () => {
 		});
 
 		it('should use text splitter when provided', async () => {
-			const loader = new N8nBinaryLoader(mockExecuteFunctions, 'options.', 'data', mockTextSplitter);
+			const loader = new N8nBinaryLoader(
+				mockExecuteFunctions,
+				'options.',
+				'data',
+				mockTextSplitter,
+			);
 			const item: INodeExecutionData = {
 				json: {},
 				binary: {

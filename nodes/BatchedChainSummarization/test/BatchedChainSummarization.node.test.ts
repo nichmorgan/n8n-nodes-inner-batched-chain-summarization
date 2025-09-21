@@ -12,17 +12,19 @@ vi.mock('@utils/tracing', () => ({
 
 vi.mock('@utils/N8nBinaryLoader', () => ({
 	N8nBinaryLoader: vi.fn().mockImplementation(() => ({
-		processItem: vi.fn().mockResolvedValue([
-			{ pageContent: 'Processed binary content', metadata: { source: 'binary' } },
-		]),
+		processItem: vi
+			.fn()
+			.mockResolvedValue([
+				{ pageContent: 'Processed binary content', metadata: { source: 'binary' } },
+			]),
 	})),
 }));
 
 vi.mock('@utils/N8nJsonLoader', () => ({
 	N8nJsonLoader: vi.fn().mockImplementation(() => ({
-		processItem: vi.fn().mockResolvedValue([
-			{ pageContent: 'Processed JSON content', metadata: { source: 'json' } },
-		]),
+		processItem: vi
+			.fn()
+			.mockResolvedValue([{ pageContent: 'Processed JSON content', metadata: { source: 'json' } }]),
 	})),
 }));
 
@@ -63,15 +65,13 @@ const createExecuteFunctionsMock = (
 			return mockLlm as BaseLanguageModel;
 		}
 		if (connectionType === NodeConnectionType.AiDocument) {
-			return [
-				{ pageContent: 'Document from loader', metadata: { source: 'loader' } },
-			];
+			return [{ pageContent: 'Document from loader', metadata: { source: 'loader' } }];
 		}
 		if (connectionType === NodeConnectionType.AiTextSplitter) {
 			return {
-				splitDocuments: vi.fn().mockResolvedValue([
-					{ pageContent: 'Split document', metadata: { source: 'splitter' } },
-				]),
+				splitDocuments: vi
+					.fn()
+					.mockResolvedValue([{ pageContent: 'Split document', metadata: { source: 'splitter' } }]),
 			};
 		}
 		return undefined;
@@ -81,12 +81,15 @@ const createExecuteFunctionsMock = (
 		const paramMap: Record<string, any> = {
 			operationMode: parameters.operationMode || 'nodeInputJson',
 			chunkingMode: parameters.chunkingMode || 'simple',
-			summarizationMethod: parameters.summarizationMethod || 'map_reduce',
 			batchSize: parameters.batchSize || 5,
 			delayBetweenBatches: parameters.delayBetweenBatches || 0,
 			chunkSize: parameters.chunkSize || 1000,
 			chunkOverlap: parameters.chunkOverlap || 200,
-			'options.customPrompts.values': parameters.customPrompts || {},
+			'options.summarizationMethodAndPrompts.values': parameters.customPrompts || {
+				summarizationMethod: parameters.summarizationMethod || 'map_reduce',
+				prompt: 'Write a concise summary of the following:\n\n{text}\n\nCONCISE SUMMARY:',
+				combineMapPrompt: 'Write a concise summary of the following:\n\n{text}\n\nCONCISE SUMMARY:',
+			},
 			'options.textKey': parameters.textKey || 'text',
 			'options.binaryDataKey': parameters.binaryDataKey || 'data',
 		};
@@ -117,15 +120,10 @@ describe('BatchedChainSummarization', () => {
 		});
 
 		it('should have correct inputs and outputs', () => {
-			expect(node.description.inputs).toHaveLength(3);
-			expect(node.description.outputs).toContain(NodeConnectionType.AiChain);
-
-			// Check required language model input
-			const inputs = node.description.inputs as any[];
-			const languageModelInput = inputs?.find(
-				(input: any) => input.type === NodeConnectionType.AiLanguageModel
-			);
-			expect(languageModelInput?.required).toBe(true);
+			// Inputs are dynamic based on parameters, so we check the structure
+			expect(typeof node.description.inputs).toBe('string');
+			expect(node.description.inputs).toContain('getInputs');
+			expect(node.description.outputs).toEqual([NodeConnectionType.Main]);
 		});
 
 		it('should have all required properties', () => {
@@ -134,11 +132,12 @@ describe('BatchedChainSummarization', () => {
 				expect.arrayContaining([
 					expect.objectContaining({ name: 'operationMode' }),
 					expect.objectContaining({ name: 'chunkingMode' }),
-					expect.objectContaining({ name: 'summarizationMethod' }),
+					expect.objectContaining({ name: 'chunkSize' }),
+					expect.objectContaining({ name: 'chunkOverlap' }),
 					expect.objectContaining({ name: 'batchSize' }),
 					expect.objectContaining({ name: 'delayBetweenBatches' }),
 					expect.objectContaining({ name: 'options' }),
-				])
+				]),
 			);
 		});
 	});
@@ -150,8 +149,9 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0]).toHaveProperty('json');
-			expect(result[0].json).toHaveProperty('output_text');
+			expect(result[0]).toHaveLength(1);
+			expect(result[0][0]).toHaveProperty('json');
+			expect(result[0][0].json).toHaveProperty('output_text');
 		});
 
 		it('should process multiple input items', async () => {
@@ -165,8 +165,9 @@ describe('BatchedChainSummarization', () => {
 
 			const result = await node.execute.call(mockExecuteFunctions);
 
-			expect(result).toHaveLength(3);
-			expect(result.every((item) => item.json && 'output_text' in item.json)).toBe(true);
+			expect(result).toHaveLength(1);
+			expect(result[0]).toHaveLength(3);
+			expect(result[0].every((item) => item.json && 'output_text' in item.json)).toBe(true);
 		});
 
 		it('should handle different operation modes', async () => {
@@ -177,6 +178,7 @@ describe('BatchedChainSummarization', () => {
 
 			const result1 = await node.execute.call(mockExecuteFunctions1);
 			expect(result1).toHaveLength(1);
+			expect(result1[0]).toHaveLength(1);
 
 			// Test nodeInputBinary mode
 			const mockExecuteFunctions2 = createExecuteFunctionsMock({
@@ -185,6 +187,7 @@ describe('BatchedChainSummarization', () => {
 
 			const result2 = await node.execute.call(mockExecuteFunctions2);
 			expect(result2).toHaveLength(1);
+			expect(result2[0]).toHaveLength(1);
 
 			// Test documentLoader mode
 			const mockExecuteFunctions3 = createExecuteFunctionsMock({
@@ -193,6 +196,7 @@ describe('BatchedChainSummarization', () => {
 
 			const result3 = await node.execute.call(mockExecuteFunctions3);
 			expect(result3).toHaveLength(1);
+			expect(result3[0]).toHaveLength(1);
 		});
 
 		it('should handle different chunking modes', async () => {
@@ -261,7 +265,11 @@ describe('BatchedChainSummarization', () => {
 
 			expect(result).toHaveLength(1);
 			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith('batchSize', 0, 5);
-			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith('delayBetweenBatches', 0, 0);
+			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
+				'delayBetweenBatches',
+				0,
+				0,
+			);
 		});
 
 		it('should use batched processing when batch size > 1 and chunking enabled', async () => {
@@ -274,7 +282,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output_text');
 		});
 	});
 
@@ -296,7 +304,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output_text');
 		});
 	});
 
@@ -311,8 +319,8 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0].json).toHaveProperty('error');
-			expect(result[0].json.error).toBe('Connection error');
+			expect(result[0][0].json).toHaveProperty('error');
+			expect(result[0][0].json.error).toBe('Connection error');
 		});
 
 		it('should throw error when continueOnFail is false', async () => {
@@ -329,7 +337,8 @@ describe('BatchedChainSummarization', () => {
 
 			const result = await node.execute.call(mockExecuteFunctions);
 
-			expect(result).toHaveLength(0);
+			expect(result).toHaveLength(1);
+			expect(result[0]).toHaveLength(0);
 		});
 	});
 
@@ -337,7 +346,8 @@ describe('BatchedChainSummarization', () => {
 		it('should handle large document processing with batching', async () => {
 			const largeDocument = {
 				json: {
-					text: 'This is a very long document '.repeat(100) + 'that needs to be processed in batches.',
+					text:
+						'This is a very long document '.repeat(100) + 'that needs to be processed in batches.',
 				},
 			};
 
@@ -349,14 +359,14 @@ describe('BatchedChainSummarization', () => {
 					chunkSize: 500,
 					chunkOverlap: 50,
 				},
-				[largeDocument]
+				[largeDocument],
 			);
 
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0].json).toHaveProperty('output_text');
-			expect(typeof result[0].json.output_text).toBe('string');
+			expect(result[0][0].json).toHaveProperty('output_text');
+			expect(typeof result[0][0].json.output_text).toBe('string');
 		});
 
 		it('should handle mixed input types correctly', async () => {
@@ -371,13 +381,14 @@ describe('BatchedChainSummarization', () => {
 					summarizationMethod: 'stuff',
 					batchSize: 2,
 				},
-				mixedInputs
+				mixedInputs,
 			);
 
 			const result = await node.execute.call(mockExecuteFunctions);
 
-			expect(result).toHaveLength(3);
-			expect(result.every((item) => item.json && 'output_text' in item.json)).toBe(true);
+			expect(result).toHaveLength(1);
+			expect(result[0]).toHaveLength(3);
+			expect(result[0].every((item) => item.json && 'output_text' in item.json)).toBe(true);
 		});
 
 		it('should process binary data correctly', async () => {
@@ -396,13 +407,13 @@ describe('BatchedChainSummarization', () => {
 					operationMode: 'nodeInputBinary',
 					summarizationMethod: 'stuff',
 				},
-				[binaryInput]
+				[binaryInput],
 			);
 
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output_text');
 		});
 	});
 
@@ -416,7 +427,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output_text');
 		});
 
 		it('should handle very large batch sizes', async () => {
@@ -427,7 +438,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output_text');
 		});
 
 		it('should handle zero delay between batches', async () => {
@@ -439,7 +450,7 @@ describe('BatchedChainSummarization', () => {
 			const result = await node.execute.call(mockExecuteFunctions);
 
 			expect(result).toHaveLength(1);
-			expect(result[0].json).toHaveProperty('output_text');
+			expect(result[0][0].json).toHaveProperty('output_text');
 		});
 	});
 });

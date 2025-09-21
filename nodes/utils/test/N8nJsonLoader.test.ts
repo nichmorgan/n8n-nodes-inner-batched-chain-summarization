@@ -47,7 +47,11 @@ describe('N8nJsonLoader', () => {
 
 			const result = await loader.processItem(item, 0);
 
-			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith('options.textKey', 0, 'text');
+			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
+				'options.textKey',
+				0,
+				'text',
+			);
 			expect(result).toHaveLength(1);
 			expect(result[0]).toEqual({
 				pageContent: 'This is the main content',
@@ -73,7 +77,11 @@ describe('N8nJsonLoader', () => {
 
 			const result = await loader.processItem(item, 1);
 
-			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith('options.textKey', 1, 'text');
+			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
+				'options.textKey',
+				1,
+				'text',
+			);
 			expect(result[0].pageContent).toBe('Custom content field');
 			expect(result[0].metadata).toMatchObject({
 				source: 'json',
@@ -128,10 +136,12 @@ describe('N8nJsonLoader', () => {
 
 			const result = await loader.processItem(item, 0);
 
-			expect(result[0].pageContent).toBe(JSON.stringify({
-				property: 'value',
-				array: [1, 2, 3],
-			}));
+			expect(result[0].pageContent).toBe(
+				JSON.stringify({
+					property: 'value',
+					array: [1, 2, 3],
+				}),
+			);
 		});
 
 		it('should handle empty JSON object', async () => {
@@ -224,8 +234,9 @@ describe('N8nJsonLoader', () => {
 		});
 
 		it('should handle different item indices correctly', async () => {
-			mockExecuteFunctions.getNodeParameter = vi.fn()
-				.mockReturnValueOnce('text')  // First call
+			mockExecuteFunctions.getNodeParameter = vi
+				.fn()
+				.mockReturnValueOnce('text') // First call
 				.mockReturnValueOnce('content'); // Second call
 
 			const loader = new N8nJsonLoader(mockExecuteFunctions, 'options.');
@@ -236,8 +247,16 @@ describe('N8nJsonLoader', () => {
 			const result1 = await loader.processItem(item1, 10);
 			const result2 = await loader.processItem(item2, 20);
 
-			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith('options.textKey', 10, 'text');
-			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith('options.textKey', 20, 'text');
+			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
+				'options.textKey',
+				10,
+				'text',
+			);
+			expect(mockExecuteFunctions.getNodeParameter).toHaveBeenCalledWith(
+				'options.textKey',
+				20,
+				'text',
+			);
 
 			expect(result1[0].metadata.itemIndex).toBe(10);
 			expect(result2[0].metadata.itemIndex).toBe(20);
@@ -257,11 +276,13 @@ describe('N8nJsonLoader', () => {
 			const result = await loader.processItem(item, 0);
 
 			// Should fallback to JSON string since nullable field is null
-			expect(result[0].pageContent).toBe(JSON.stringify({
-				nullable: null,
-				undefined: undefined,
-				text: 'fallback text',
-			}));
+			expect(result[0].pageContent).toBe(
+				JSON.stringify({
+					nullable: null,
+					undefined: undefined,
+					text: 'fallback text',
+				}),
+			);
 		});
 
 		it('should handle array values by stringifying them', async () => {

@@ -3,10 +3,26 @@
   "version": "0.1.0",
   "description": "n8n community node with intelligent batched chain summarization for processing large documents efficiently",
   "keywords": [
-    "n8n-community-node-package"
+    "n8n-community-node-package",
+    "n8n",
+    "summarization",
+    "langchain",
+    "ai",
+    "nlp",
+    "text-processing",
+    "document-processing",
+    "batch-processing",
+    "rate-limiting",
+    "map-reduce",
+    "text-summarization",
+    "automation",
+    "workflow"
   ],
   "license": "MIT",
-  "homepage": "",
+  "homepage": "https://github.com/nichmorgan/n8n-nodes-inner-batched-chain-summarization#readme",
+  "bugs": {
+    "url": "https://github.com/nichmorgan/n8n-nodes-inner-batched-chain-summarization/issues"
+  },
   "author": {
     "name": "Morgan C. Nicholson",
     "email": "nich.dev@pm.me"
@@ -22,13 +38,13 @@
   "scripts": {
     "build": "npx rimraf dist && tsc && gulp build:icons",
     "dev": "tsc --watch",
-    "format": "prettier nodes credentials --write",
-    "lint": "eslint 'nodes/**/*.ts' 'utils/**/*.ts' --ignore-pattern '**/*.test.ts'",
-    "lintfix": "eslint 'nodes/**/*.ts' 'utils/**/*.ts' --ignore-pattern '**/*.test.ts' --fix",
+    "format": "prettier nodes --write",
+    "lint": "eslint 'nodes/**/*.ts' --ignore-pattern '**/*.test.ts'",
+    "lintfix": "eslint 'nodes/**/*.ts' --ignore-pattern '**/*.test.ts' --fix",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
+    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes package.json"
   },
   "files": [
     "dist"

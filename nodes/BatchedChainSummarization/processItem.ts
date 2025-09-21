@@ -2,15 +2,15 @@ import type { Document } from '@langchain/core/documents';
 import type { BaseLanguageModel } from '@langchain/core/language_models/base';
 import type { ChainValues } from '@langchain/core/utils/types';
 import { RecursiveCharacterTextSplitter, type TextSplitter } from '@langchain/textsplitters';
-import { loadSummarizationChain } from 'langchain/chains';
 import { type IExecuteFunctions, type INodeExecutionData, NodeConnectionType } from 'n8n-workflow';
 
-import { N8nBinaryLoader } from '@utils/N8nBinaryLoader';
-import { N8nJsonLoader } from '@utils/N8nJsonLoader';
-import { getTracingConfig } from '@utils/tracing';
+import { N8nBinaryLoader } from '../utils/N8nBinaryLoader';
+import { N8nJsonLoader } from '../utils/N8nJsonLoader';
+import { getTracingConfig } from '../utils/tracing';
 
 import { BatchedSummarizationChain } from './batchedSummarizationChain';
 import { getChainPromptsArgs } from './helpers';
+import { DEFAULT_BATCH_SIZE, DEFAULT_DELAY_BETWEEN_BATCHES } from './constants';
 
 export async function processItem(
 	ctx: IExecuteFunctions,
@@ -24,7 +24,11 @@ export async function processItem(
 		0,
 	)) as BaseLanguageModel;
 
-	const summarizationMethod = ctx.getNodeParameter('summarizationMethod', itemIndex, 'map_reduce') as 'map_reduce' | 'stuff' | 'refine';
+	const summarizationMethod = ctx.getNodeParameter(
+		'summarizationMethod',
+		itemIndex,
+		'map_reduce',
+	) as 'map_reduce' | 'stuff' | 'refine';
 
 	// Get custom prompts if provided
 	const customPrompts = ctx.getNodeParameter('options.customPrompts.values', itemIndex, {}) as {
@@ -35,31 +39,22 @@ export async function processItem(
 		refinePrompt?: string;
 	};
 
-	// Get batching parameters
-	const batchSize = ctx.getNodeParameter('batchSize', itemIndex, 5) as number;
-	const delayBetweenBatches = ctx.getNodeParameter('delayBetweenBatches', itemIndex, 0) as number;
+	// Get batching parameters using shared constants
+	const batchSize = ctx.getNodeParameter('batchSize', itemIndex, DEFAULT_BATCH_SIZE) as number;
+	const delayBetweenBatches = ctx.getNodeParameter(
+		'delayBetweenBatches',
+		itemIndex,
+		DEFAULT_DELAY_BETWEEN_BATCHES,
+	) as number;
 
-	// Always use batched processing if batch size > 1 and we have chunks
-	const shouldUseBatchedProcessing = batchSize > 1 && chunkingMode !== 'none';
-
-	let chain: any;
-
-	if (shouldUseBatchedProcessing) {
-		// Use our custom batched implementation
-		const chainArgs = getChainPromptsArgs(summarizationMethod, customPrompts);
-
-		chain = new BatchedSummarizationChain({
-			model,
-			type: summarizationMethod,
-			batchSize,
-			delayBetweenBatches,
-			...chainArgs,
-		});
-	} else {
-		// Use standard LangChain implementation
-		const chainArgs = getChainPromptsArgs(summarizationMethod, customPrompts);
-		chain = loadSummarizationChain(model, chainArgs);
-	}
+	const chainArgs = getChainPromptsArgs(summarizationMethod, customPrompts);
+	const chain = new BatchedSummarizationChain({
+		model,
+		type: summarizationMethod,
+		batchSize,
+		delayBetweenBatches,
+		...chainArgs,
+	});
 
 	let processedDocuments: Document[];
 

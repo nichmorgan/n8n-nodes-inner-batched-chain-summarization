@@ -4,6 +4,15 @@ import type { ChainValues } from '@langchain/core/utils/types';
 import { PromptTemplate, type BasePromptTemplate } from '@langchain/core/prompts';
 import { sleep } from 'n8n-workflow';
 
+import {
+	DEFAULT_BATCH_SIZE,
+	DEFAULT_DELAY_BETWEEN_BATCHES,
+	MIN_BATCH_SIZE,
+	MIN_DELAY,
+	MAX_BATCH_SIZE,
+	MAX_DELAY,
+} from './constants';
+
 export type SummarizationType = 'map_reduce' | 'stuff' | 'refine';
 
 interface BatchedSummarizationChainParams {
@@ -33,8 +42,15 @@ export class BatchedSummarizationChain {
 	constructor(params: BatchedSummarizationChainParams) {
 		this.model = params.model;
 		this.type = params.type;
-		this.batchSize = params.batchSize ?? 1;
-		this.delayBetweenBatches = params.delayBetweenBatches ?? 0;
+
+		// Validate and set batchSize with proper bounds
+		const rawBatchSize = params.batchSize ?? DEFAULT_BATCH_SIZE;
+		this.batchSize = Math.max(MIN_BATCH_SIZE, Math.min(MAX_BATCH_SIZE, Math.floor(rawBatchSize)));
+
+		// Validate and set delayBetweenBatches with proper bounds
+		const rawDelay = params.delayBetweenBatches ?? DEFAULT_DELAY_BETWEEN_BATCHES;
+		this.delayBetweenBatches = Math.max(MIN_DELAY, Math.min(MAX_DELAY, Math.floor(rawDelay)));
+
 		this.combineMapPrompt = params.combineMapPrompt;
 		this.combinePrompt = params.combinePrompt;
 		this.prompt = params.prompt;
