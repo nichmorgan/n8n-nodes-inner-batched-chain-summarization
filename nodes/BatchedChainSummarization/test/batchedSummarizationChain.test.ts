@@ -56,6 +56,27 @@ describe('BatchedSummarizationChain', () => {
 
 			expect(chain).toBeInstanceOf(BatchedSummarizationChain);
 		});
+
+		it('should initialize with outputSize and sizeMeasurement parameters', () => {
+			const chain = new BatchedSummarizationChain({
+				model: mockModel,
+				type: 'map_reduce',
+				outputSize: 500,
+				sizeMeasurement: 'tokens',
+			});
+
+			expect(chain).toBeInstanceOf(BatchedSummarizationChain);
+		});
+
+		it('should default sizeMeasurement to characters', () => {
+			const chain = new BatchedSummarizationChain({
+				model: mockModel,
+				type: 'map_reduce',
+				outputSize: 200,
+			});
+
+			expect(chain).toBeInstanceOf(BatchedSummarizationChain);
+		});
 	});
 
 	describe('Map Reduce Method', () => {
@@ -182,7 +203,11 @@ describe('BatchedSummarizationChain', () => {
 
 			const result = await chain.invoke({ input_documents: [] });
 
-			expect(result).toEqual({ output: { text: '' } });
+			expect(result).toHaveProperty('output');
+			expect(result.output).toHaveProperty('text', '');
+			expect(result.output).toHaveProperty('sizeValidation');
+			expect(result.output.sizeValidation).toHaveProperty('isValid', true);
+			expect(result.output.sizeValidation).toHaveProperty('retryCount', 0);
 		});
 
 		it('should handle single document', async () => {
@@ -638,6 +663,209 @@ describe('BatchedSummarizationChain', () => {
 			expect(result).toHaveProperty('output');
 			// Refine: 1 initial + 2 remaining docs in 1 batch = no sleep needed
 			expect(mockSleep).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('Output Size Validation', () => {
+		it('should include size validation in output when outputSize is set', async () => {
+			const chain = new BatchedSummarizationChain({
+				model: mockModel,
+				type: 'stuff',
+				outputSize: 50,
+				sizeMeasurement: 'characters',
+			});
+
+			const result = await chain.invoke({ input_documents: documents });
+
+			expect(result).toHaveProperty('output');
+			expect(result.output).toHaveProperty('text');
+			expect(result.output).toHaveProperty('sizeValidation');
+			expect(result.output.sizeValidation).toHaveProperty('isValid');
+			expect(result.output.sizeValidation).toHaveProperty('actualSize');
+			expect(result.output.sizeValidation).toHaveProperty('maxSize', 50);
+			expect(result.output.sizeValidation).toHaveProperty('unit', 'characters');
+		});
+
+		it('should include size validation for token measurement', async () => {
+			const chain = new BatchedSummarizationChain({
+				model: mockModel,
+				type: 'map_reduce',
+				outputSize: 100,
+				sizeMeasurement: 'tokens',
+			});
+
+			const result = await chain.invoke({ input_documents: documents });
+
+			expect(result.output.sizeValidation).toHaveProperty('unit', 'tokens');
+		});
+
+		it('should include warning when output exceeds size limit', async () => {
+			const longResponse = 'A'.repeat(200); // Long response
+			const mockLongModel = new FakeListChatModel({
+				responses: [longResponse, longResponse, longResponse, longResponse],
+			});
+
+			const chain = new BatchedSummarizationChain({
+				model: mockLongModel,
+				type: 'stuff',
+				outputSize: 50,
+				sizeMeasurement: 'characters',
+			});
+
+			const result = await chain.invoke({ input_documents: documents });
+
+			expect(result.output.sizeValidation.isValid).toBe(false);
+			expect(result.output.sizeValidation.actualSize).toBeGreaterThan(50);
+			expect(result.output.sizeValidation).toHaveProperty('warning');
+			expect(result.output.sizeValidation.warning).toContain('exceeds limit');
+		});
+
+		it('should work without outputSize set', async () => {
+			const chain = new BatchedSummarizationChain({
+				model: mockModel,
+				type: 'stuff',
+			});
+
+			const result = await chain.invoke({ input_documents: documents });
+
+			expect(result.output.sizeValidation.isValid).toBe(true);
+			expect(result.output.sizeValidation).not.toHaveProperty('maxSize');
+			expect(result.output.sizeValidation).not.toHaveProperty('warning');
+		});
+
+		it('should retry with shorter prompts when output exceeds limit', async () => {
+			// Create a model that first returns long text, then shorter text on retry
+			const mockRetryModel = new FakeListChatModel({
+				responses: [
+					'A'.repeat(200), // First response is too long
+					'Short summary', // Retry response fits
+				],
+			});
+
+			const chain = new BatchedSummarizationChain({
+				model: mockRetryModel,
+				type: 'stuff',
+				outputSize: 50,
+				sizeMeasurement: 'characters',
+			});
+
+			const result = await chain.invoke({ input_documents: documents });
+
+			expect(result.output.text).toBe('Short summary');
+			expect(result.output.sizeValidation.isValid).toBe(true);
+			expect(result.output.sizeValidation.retryCount).toBe(1);
+			expect(result.output.sizeValidation.actualSize).toBeLessThanOrEqual(50);
+		});
+
+		it('should include retryCount in sizeValidation when no retry needed', async () => {
+			const chain = new BatchedSummarizationChain({
+				model: mockModel,
+				type: 'stuff',
+				outputSize: 500, // Large enough to not trigger retry
+				sizeMeasurement: 'characters',
+			});
+
+			const result = await chain.invoke({ input_documents: documents });
+
+			expect(result.output.sizeValidation.retryCount).toBe(0);
+		});
+
+		it('should include system guidelines in prompts when outputSize is set', async () => {
+			const mockModelWithPromptCapture = {
+				invoke: vi.fn().mockResolvedValue('Short summary'),
+			};
+
+			const chain = new BatchedSummarizationChain({
+				model: mockModelWithPromptCapture as any,
+				type: 'stuff',
+				outputSize: 100,
+				sizeMeasurement: 'tokens',
+			});
+
+			await chain.invoke({ input_documents: documents });
+
+			// Verify that the model was called with a prompt containing system guidelines
+			expect(mockModelWithPromptCapture.invoke).toHaveBeenCalled();
+			const calledPrompt = mockModelWithPromptCapture.invoke.mock.calls[0][0];
+
+			expect(calledPrompt).toContain('CRITICAL SIZE LIMIT');
+			expect(calledPrompt).toContain('100 tokens');
+			expect(calledPrompt).toContain('STRICT LIMIT');
+			expect(calledPrompt).toContain('automatically validated');
+		});
+
+		it('should use agent with counting tools when useAgent is true', async () => {
+			const mockModelWithAgent = {
+				invoke: vi.fn().mockResolvedValue('Agent-generated summary within limit'),
+			};
+
+			const chain = new BatchedSummarizationChain({
+				model: mockModelWithAgent as any,
+				type: 'stuff',
+				outputSize: 100,
+				sizeMeasurement: 'characters',
+				useAgent: true, // Enable agent mode
+			});
+
+			const result = await chain.invoke({ input_documents: documents });
+
+			expect(result.output.text).toBe('Agent-generated summary within limit');
+			expect(result.output.sizeValidation.actualSize).toBeLessThanOrEqual(100);
+		});
+
+		it('should fallback to traditional approach when useAgent is false', async () => {
+			const mockModelTraditional = {
+				invoke: vi.fn().mockResolvedValue('Traditional summary'),
+			};
+
+			const chain = new BatchedSummarizationChain({
+				model: mockModelTraditional as any,
+				type: 'stuff',
+				outputSize: 100,
+				sizeMeasurement: 'characters',
+				useAgent: false, // Disable agent mode (default)
+			});
+
+			const result = await chain.invoke({ input_documents: documents });
+
+			expect(result.output.text).toBe('Traditional summary');
+			// Should still have size validation but use traditional retry if needed
+			expect(result.output.sizeValidation).toHaveProperty('actualSize');
+		});
+
+		it('should use progressively stricter retry prompts', async () => {
+			const mockModelWithStrictPrompts = {
+				invoke: vi.fn()
+					.mockResolvedValueOnce('A'.repeat(200)) // First response too long
+					.mockResolvedValueOnce('B'.repeat(150)) // Second response still too long
+					.mockResolvedValueOnce('Short final'), // Third response fits
+			};
+
+			const chain = new BatchedSummarizationChain({
+				model: mockModelWithStrictPrompts as any,
+				type: 'stuff',
+				outputSize: 50,
+				sizeMeasurement: 'characters',
+			});
+
+			const result = await chain.invoke({ input_documents: documents });
+
+			// Should have made 3 calls (initial + 2 retries)
+			expect(mockModelWithStrictPrompts.invoke).toHaveBeenCalledTimes(3);
+
+			// Verify retry prompts get progressively stricter
+			const calls = mockModelWithStrictPrompts.invoke.mock.calls;
+
+			// Second call should be retry attempt 1
+			expect(calls[1][0]).toContain('SIZE VIOLATION');
+			expect(calls[1][0]).toContain('RETRY ATTEMPT 1');
+
+			// Third call should be retry attempt 2
+			expect(calls[2][0]).toContain('FINAL WARNING');
+			expect(calls[2][0]).toContain('RETRY ATTEMPT 2');
+
+			expect(result.output.text).toBe('Short final');
+			expect(result.output.sizeValidation.retryCount).toBe(1);
 		});
 	});
 });

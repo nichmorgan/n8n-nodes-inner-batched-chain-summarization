@@ -158,6 +158,32 @@ export class BatchedChainSummarization implements INodeType {
 				description: 'Delay in milliseconds between batches. This is useful for rate limiting.',
 			},
 			{
+				displayName: 'Output Size Limit',
+				name: 'outputSize',
+				type: 'number',
+				default: 1000,
+				description: 'Maximum size for the final summary output',
+			},
+			{
+				displayName: 'Size Measurement',
+				name: 'sizeMeasurement',
+				type: 'options',
+				default: 'characters',
+				description: 'How to measure the output size limit',
+				options: [
+					{
+						name: 'Characters',
+						value: 'characters',
+						description: 'Count by number of characters',
+					},
+					{
+						name: 'Tokens',
+						value: 'tokens',
+						description: 'Count by number of tokens',
+					},
+				],
+			},
+			{
 				displayName: 'Options',
 				name: 'options',
 				type: 'collection',

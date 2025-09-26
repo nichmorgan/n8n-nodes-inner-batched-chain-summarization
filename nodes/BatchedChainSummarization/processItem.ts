@@ -47,12 +47,18 @@ export async function processItem(
 		DEFAULT_DELAY_BETWEEN_BATCHES,
 	) as number;
 
+	// Get output size parameters
+	const outputSize = ctx.getNodeParameter('outputSize', itemIndex, undefined) as number | undefined;
+	const sizeMeasurement = ctx.getNodeParameter('sizeMeasurement', itemIndex, 'characters') as 'characters' | 'tokens';
+
 	const chainArgs = getChainPromptsArgs(summarizationMethod, customPrompts);
 	const chain = new BatchedSummarizationChain({
 		model,
 		type: summarizationMethod,
 		batchSize,
 		delayBetweenBatches,
+		outputSize,
+		sizeMeasurement,
 		...chainArgs,
 	});
 
